@@ -430,6 +430,7 @@ static inline int C10_WARP_SIZE_INTERNAL() {
 #define CUDA_KERNEL_ASSERT_MSG(cond, msg)
 #define CUDA_KERNEL_ASSERT_PRINTF(cond, msg, ...)
 #define SYCL_KERNEL_ASSERT(cond)
+#define SYCL_KERNEL_ASSERT_MSG(cond, msg)
 #elif defined(_MSC_VER)
 #if defined(NDEBUG)
 extern "C" {
@@ -487,6 +488,16 @@ __host__ __device__
            0);                                                        \
   }
 #define SYCL_KERNEL_ASSERT(cond)                 \
+  if (C10_UNLIKELY(!(cond))) {                   \
+    (void)(_wassert(                             \
+               _CRT_WIDE(#cond),                 \
+               _CRT_WIDE(__FILE__),              \
+               static_cast<unsigned>(__LINE__)), \
+           0);                                   \
+  }
+// TODO: This doesn't assert the message because there is no nice way to
+// convert a char* to a wchar_t*
+#define SYCL_KERNEL_ASSERT_MSG(cond, msg)        \
   if (C10_UNLIKELY(!(cond))) {                   \
     (void)(_wassert(                             \
                _CRT_WIDE(#cond),                 \
@@ -553,6 +564,10 @@ __host__ __device__
   if C10_UNLIKELY (!(cond)) {    \
     abort();                     \
   }
+#define SYCL_KERNEL_ASSERT_MSG(cond, msg) \
+  if C10_UNLIKELY (!(cond)) {             \
+    abort();                              \
+  }
 #else
 #define CUDA_KERNEL_ASSERT(cond)                                         \
   if (C10_UNLIKELY(!(cond))) {                                           \
@@ -585,6 +600,11 @@ __host__ __device__
   if (C10_UNLIKELY(!(cond))) {                                           \
     __assert_fail(                                                       \
         #cond, __FILE__, static_cast<unsigned int>(__LINE__), __func__); \
+  }
+#define SYCL_KERNEL_ASSERT_MSG(cond, msg)                              \
+  if (C10_UNLIKELY(!(cond))) {                                         \
+    __assert_fail(                                                     \
+        msg, __FILE__, static_cast<unsigned int>(__LINE__), __func__); \
   }
 #endif //  C10_USE_ROCM_KERNEL_ASSERT && USE_ROCM
 #endif // __APPLE__
